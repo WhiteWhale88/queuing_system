@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /Queue.pyproj
 /Queue.sln
+/app/timer.py
