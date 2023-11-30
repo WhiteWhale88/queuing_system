@@ -11,9 +11,10 @@ _SPEED = ["0.5x", "1x", "1.5x", "2x", "5x", "10x"]
 _ISWORK = True
 
 
-def work_generate(type):
+def change_work(type_work):
+    """Изменение режима работы системы"""
     global _ISWORK
-    match type:
+    match type_work:
         case 0:
             _ISWORK = True
             dpg.set_value("time_passed", "Время работы: 0")
@@ -22,36 +23,41 @@ def work_generate(type):
             _ISWORK = False
         case 2:
             _ISWORK = False
-            dpg.configure_item(f"queue_1", items=[])
+            dpg.configure_item("queue_1", items=[])
             for index in range(1, len(QUEUE.queues)):
                 dpg.delete_item(f"flow_{index + 1}")
-            QUEUE.queues = [[]]
-            QUEUE.size_queue = []
-            QUEUE.waiting_time = []
+            QUEUE.clear_queue()
             dpg.set_value("avg_size", "Средний размер очереди: 0")
             dpg.set_value("avg_wait", "Среднее время ожидания в очереди: 0")
 
 
 def timer(sec):
     """Отсчет времени"""
+
+    # Уменьшение очереди
     QUEUE.decrease()
+
+    # Добавление нового элемента
     if sec == DISTRIB.value_ex:
         QUEUE.put(DISTRIB.value_norm)
         DISTRIB.gen_next_values()
 
-    sums = sum(sum(q) for q in QUEUE.queues)
-    for index in range(len(QUEUE.queues)):
-        dpg.configure_item(f"queue_{index + 1}", items=QUEUE.queues[index])
+    # Изменение отображения очередей и их нагруженности
+    for index,val in enumerate(QUEUE.queues):
+        dpg.configure_item(f"queue_{index + 1}", items=val)
         load = 0
-        if sums != 0:
-            load = round(sum(QUEUE.queues[index]) / sums, 2)
+        if QUEUE.sum_elem != 0:
+            load = round(sum(QUEUE.queues[index]) / QUEUE.sum_elem, 2)
         dpg.set_value(f"load_{index + 1}", f"Нагруженность: {load}%")
 
+    # Изменение средних характеристик
     dpg.set_value("avg_size", f"Средний размер очереди: {QUEUE.get_avg_size()}")
     dpg.set_value(
         "avg_wait", f"Среднее время ожидания в очереди: {QUEUE.get_avg_wait()}"
     )
     dpg.set_value("time_passed", f"Время работы: {sec}")
+
+    # Увеличение времени и запуск таймера
     sec += 1
     if _ISWORK:
         Timer(1 / float(dpg.get_value("speed")[:-1]), lambda: timer(sec)).start()
@@ -111,7 +117,7 @@ if __name__ == "__main__":
                     dpg.add_text("ПАРАМЕТРЫ ПОТОКА")
                     dpg.add_text("Интенсивность")
                     dpg.add_input_text(
-                        default_value=10,
+                        default_value="10",
                         width=300,
                         decimal=True,
                         tag="lambd",
@@ -119,7 +125,7 @@ if __name__ == "__main__":
                     )
                     dpg.add_text("Среднее время обработки")
                     dpg.add_input_text(
-                        default_value=10,
+                        default_value="10",
                         width=300,
                         decimal=True,
                         tag="mean",
@@ -127,7 +133,7 @@ if __name__ == "__main__":
                     )
                     dpg.add_text("Среднее время отклонения\nвремени обработки")
                     dpg.add_input_text(
-                        default_value=3,
+                        default_value="3",
                         width=300,
                         decimal=True,
                         tag="sigma",
@@ -161,13 +167,13 @@ if __name__ == "__main__":
 
                 with dpg.group(horizontal=True):
                     dpg.add_button(
-                        label="Старт", width=100, callback=lambda: work_generate(0)
+                        label="Старт", width=100, callback=lambda: change_work(0)
                     )
                     dpg.add_button(
-                        label="Пауза", width=100, callback=lambda: work_generate(1)
+                        label="Пауза", width=100, callback=lambda: change_work(1)
                     )
                     dpg.add_button(
-                        label="Стоп", width=100, callback=lambda: work_generate(2)
+                        label="Стоп", width=100, callback=lambda: change_work(2)
                     )
             with dpg.group():
                 dpg.add_text("ПОТОК")
